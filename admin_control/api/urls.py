@@ -11,5 +11,9 @@ urlpatterns = [
     # path("my-account/update/", views.ClientProfileUpdateAPIView.as_view(), name="client_update"),
     path('venue-management/all-venues/', views.AdminVenueListCreateView.as_view(), name='all_venues'),
     path('venue-management/venue/<int:pk>/', views.VenueRetrieveUpdateAPIView.as_view(), name='venue'),
+    path('venue-management/venue-images/', views.VenueImageListCreateAPIView.as_view(), name='venue_image_create_list'),
+    path('venue-management/venue-image/<int:pk>/', views.VenueImageRetrieveUpdateAPIView.as_view(), name='venue_image_update'),
+    path('venue-management/all-amenities/', views.AdminAmenityListCreateView.as_view(), name='all_amenities'),
+    # path('venue-management/venue/<int:pk>/', views.VenueRetrieveUpdateAPIView.as_view(), name='venue'),
 
 ]

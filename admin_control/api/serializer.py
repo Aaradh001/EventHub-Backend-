@@ -61,34 +61,51 @@ class AmenitiesSerializer(serializers.ModelSerializer):
         model = Amenities
         fields = '__all__'
 
+class VenueImageSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = VenueImage
+        fields = '__all__'
+    
+    def create(self, validated_data):
+        print("dwsdsd", validated_data)
+        return VenueImage.objects.create(image=validated_data['image'], caption=validated_data['caption'])
+
+   
 
 class VenueSerializer(serializers.ModelSerializer):
-    amenities = AmenitiesSerializer(many=True)
+    amenities = AmenitiesSerializer(many=True, required = False)
     description = serializers.CharField(required=False)
+    images = VenueImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Venue
         fields = '__all__'
 
     def update(self, instance, validated_data):
-        print("hello sreee\n\n\n\n\n")
-        # Check if the request method is PATCH
         if self.context['request'].method == 'PATCH':
-            print("hello aaradh")
-            # Update only the 'is_active' field if present in the validated data
             if 'is_active' in validated_data:
                 instance.is_active = validated_data['is_active']
-        # For PUT requests, update the entire instance
-        else:
-            print("heloo sree and aaradh")
-            amenities_data = validated_data.pop('amenities', None)
+        elif self.context['request'].method == 'PUT':
+            amenities_data = validated_data.pop('amenities', [])
             instance = super().update(instance, validated_data)
             if amenities_data is not None:
-            # Clear existing amenities
                 instance.amenities.clear()
-            # Add new amenities
                 for amenity_data in amenities_data:
                     amenity, created = Amenities.objects.get_or_create(**amenity_data)
                     instance.amenities.add(amenity)
         instance.save()
         return instance
+
+    def create(self, validated_data):
+        amenities_data = validated_data.pop('amenities', None)
+        venue = Venue.objects.create(**validated_data)
+
+        if amenities_data:
+            # Create new amenities if they don't exist in the database
+            for amenity_data in amenities_data:
+                amenity, created = Amenities.objects.get_or_create(**amenity_data)
+                venue.amenities.add(amenity)
+
+        return venue
+

@@ -19,7 +19,7 @@ from decouple import config
 from django.conf import settings
 from accounts.models import Account, ClientProfile
 from venue_management.models import Venue, Amenities, VenueImage
-from .serializer import ClientSerializer, VenueListSerializer, VenueSerializer, AmenitiesSerializer
+from .serializer import ClientSerializer, VenueListSerializer, VenueSerializer, AmenitiesSerializer, VenueImageSerializer
 from django.contrib.auth import get_user_model
 import json
 # Create your views here.
@@ -137,29 +137,74 @@ class VenueRetrieveUpdateAPIView(RetrieveUpdateAPIView):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
-        # Additional data to add to the response
-        # Fetch all amenities
         all_amenities = Amenities.objects.all()
         amenity_serializer = AmenitiesSerializer(all_amenities, many=True)
-
         choices = {
             'reservation_choices': [i[0] for i in Venue.RESERVATION_CHOICES],
             'venue_type_choices': [i[0] for i in Venue.VENUE_TYPE_CHOICES],
             'all_amenities': amenity_serializer.data
         }
-        # Add additional data to the serialized representation
         response_data = serializer.data
         response_data.update(choices)
         return Response(response_data)
 
-    # def update(self, instance, validated_data):
-    #     # Check if 'blockorunblock' is in the validated data
-    #     if 'blockorunblock' in validated_data:
-    #         blockorunblock = validated_data.pop('blockorunblock')
-    #         instance.is_active = not blockorunblock  # Toggle the 'is_active' field based on 'blockorunblock'
-    #     else:
-    #         # Update the instance with the validated data (excluding 'blockorunblock')
-    #         instance = super().update(instance, validated_data)
-    #     instance.save()
-    #     return instance
+
+class VenueImageListCreateAPIView(ListCreateAPIView):
+    # serializer_class = VenueImageSerializer
+    permission_classes = [IsAuthAdmin]
+    parser_classes = [MultiPartParser]
+
+    def get_queryset(self):
+        print(self.request.data)
+        venue_id = self.request.data.get('venueId')
+        queryset = VenueImage.objects.filter(venue_id=venue_id)
+        return queryset
+    
+    def post(self, request, *args, **kwargs):
+        serializer = VenueImageSerializer(data=request.data, many=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        else:
+            return Response(serializer.errors, status=400)
+    
+
+class VenueImageRetrieveUpdateAPIView(RetrieveUpdateAPIView):
+    queryset = VenueImage.objects.all()
+    serializer_class = VenueImageSerializer
+    permission_classes = [IsAuthAdmin]
+
+    def put(self, request, *args, **kwargs):
+        image_id = kwargs.get('pk')
+        try:
+            venue_image_instance = self.get_object()
+        except VenueImage.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        file = request.data.get('image')
+        venue_id = request.data.get('venue_id')
+        serializer = self.get_serializer(venue_image_instance, data={'image': file, 'venue': venue_id}, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class AdminAmenityListCreateView(ListCreateAPIView):
+    permission_classes = [IsAuthAdmin]
+    serializer_class = AmenitiesSerializer
+    queryset = Amenities.objects.all()
+    
    
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        serializer = self.get_serializer(queryset, many = True)
+
+        response_data = {
+            "amenities" : serializer.data,
+            'reservation_choices': [i[0] for i in Venue.RESERVATION_CHOICES],
+            'venue_type_choices': [i[0] for i in Venue.VENUE_TYPE_CHOICES],
+            }
+
+        return Response(response_data)
