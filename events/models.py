@@ -1,5 +1,5 @@
 from django.db import models
-from accounts.models import VendorProfile
+from accounts.models import VendorProfile, ClientProfile
 from services.models import Service
 # from venue_management.models import Venue
 from django.core.validators import MinValueValidator
@@ -32,12 +32,15 @@ class Event(models.Model):
         ('VERIFICATION_IN_PROGRESS', 'VERIFICATION_IN_PROGRESS'),
         ('COMPLETED', 'COMPLETED'),
     )
-    event_cat = models.ForeignKey(EventCategory, on_delete=models.DO_NOTHING)
+    event_id = models.CharField(max_length=150)
+    event_cat = models.ForeignKey(EventCategory, on_delete=models.DO_NOTHING, null=True, blank=True)
+    thumbnail = models.ImageField(upload_to='events/eventthumb/', null = True, blank = True)
     # venue = models.ForeignKey(Venue, on_delete=models.DO_NOTHING)
-    organiser = models.ForeignKey(VendorProfile, on_delete=models.DO_NOTHING)
+    organiser = models.ForeignKey(VendorProfile, on_delete=models.DO_NOTHING, null=True, blank=True)
+    client = models.ForeignKey(ClientProfile, on_delete=models.DO_NOTHING)
     name = models.CharField(max_length=150)
     description = models.TextField(null=True, blank=True)
-    guest_count = models.IntegerField(validators=[MinValueValidator(0)])
+    guest_count = models.IntegerField(validators=[MinValueValidator(0)], null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField()
     is_advance_paid = models.BooleanField(default=False)
@@ -49,6 +52,7 @@ class Event(models.Model):
     
     def __str__(self):
         return self.name
+    
 
 
 # @deconstructible
