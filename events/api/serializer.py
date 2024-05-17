@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from ..models import EventCategory, Event
+from accounts.models import ClientProfile, Account
+from accounts.api.client.serializers import ClientProfileSerializer
 
 
 
@@ -9,10 +11,13 @@ class EventCategorySerialiser(serializers.ModelSerializer):
         fields = "__all__"
 
 class EventSerialiser(serializers.ModelSerializer):
+    # client = ClientProfileSerializer()/
+    client = serializers.PrimaryKeyRelatedField(read_only=True)
+    
     class Meta:
         model = Event
         fields = "__all__"
-        read_only_fields = ['client']
+        read_only_fields = ['client', 'event_id']
 
         extra_kwargs = {
             # 'event_cat': {'required': True},

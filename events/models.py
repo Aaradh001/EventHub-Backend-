@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils.deconstruct import deconstructible
 from jsonschema import validate
 from typing import Optional
+import datetime
 
 # Create your models here.
 class EventCategory(models.Model):
@@ -27,6 +28,7 @@ class EventCategory(models.Model):
 class Event(models.Model):
     STATUS_CHOICES = (
         ('LAUNCHED', 'LAUNCHED'),
+        ('PENDING', 'PENDING'),
         ('ASSIGNED', 'ASSIGNED'),
         ('WORK_IN_PROGRESS', 'WORK_IN_PROGRESS'),
         ('VERIFICATION_IN_PROGRESS', 'VERIFICATION_IN_PROGRESS'),
@@ -52,6 +54,15 @@ class Event(models.Model):
     
     def __str__(self):
         return self.name
+    
+    # def save(self, *args, **kwargs):
+    #     # Custom behavior before saving
+    #     if not self.event_id:
+    #         counter = Event.objects.all().count()+1
+    #         self.event_id = 'EH'+str(round(datetime.datetime.now().timestamp()))+str(counter)
+
+    #     # Call the original save method
+    #     super(Event, self).save(*args, **kwargs)
     
 
 

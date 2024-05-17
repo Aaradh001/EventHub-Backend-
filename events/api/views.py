@@ -1,12 +1,13 @@
 from rest_framework.generics import ListCreateAPIView, ListAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 from ..models import EventCategory, Event
 from accounts.models import ClientProfile, VendorProfile
 from .serializer import EventCategorySerialiser, EventSerialiser
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework import status
-
+import datetime
 
 class EventCategoryListCreateView(ListCreateAPIView):
     permission_classes = []
@@ -30,13 +31,45 @@ class EventListCreateView(ListCreateAPIView):
         print(queryset)
         return queryset
     
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        
+        try:
+            client = ClientProfile.objects.get(client_id=self.request.user.id)
+        except ClientProfile.DoesNotExist as e:
+            print(e)
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        launched_event = Event.objects.filter(client_id=client.pk, status="LAUNCHED").first()
+        all_events_serializer = self.get_serializer(queryset, many=True)
+        if launched_event:
+            launched_event_serializer = self.get_serializer(launched_event)
+            launched_event_data = launched_event_serializer.data
+        else:
+            launched_event_data = None
+        return Response({
+            'all_events': all_events_serializer.data,
+            'current_event': launched_event_data
+        })
+
     def perform_create(self, serializer):
         try:
             client = ClientProfile.objects.get(client_id=self.request.user.id)
         except ClientProfile.DoesNotExist:
             raise NotFound("Client profile not found")
+        
+        if Event.objects.filter(client_id=client.pk, status="launched").exists():
+            raise ValidationError("There is already an event launched for this client.")
+        
+        counter = Event.objects.all().count()+1
+        event_id = 'EH'+str(round(datetime.datetime.now().timestamp()))+str(counter)
 
-        serializer.save(client=client)
+        try:
+            serializer.save(client=client, event_id=event_id)
+        except ValidationError as e:
+            print("Validation error: ", e)
+            raise e
 
 
 class EventRetrieveUpdateView(RetrieveUpdateAPIView):
@@ -50,7 +83,6 @@ class EventRetrieveUpdateView(RetrieveUpdateAPIView):
             client = ClientProfile.objects.get(client_id=self.request.user.id)
         except ClientProfile.DoesNotExist:
             raise NotFound("Client profile not found")
-
         serializer.save(client=client)
     
     def update(self, request, *args, **kwargs):
