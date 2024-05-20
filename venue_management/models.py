@@ -37,6 +37,7 @@ class Venue(models.Model):
     city = models.CharField(max_length=150, db_index=True)
     state = models.CharField(max_length=200, db_index=True)
     country = models.CharField(max_length=200, db_index=True)
+    thumbnail = models.ImageField(upload_to='venue/thumbnail', null=True, blank=True)
     pincode = models.IntegerField(db_index=True)
     description = models.TextField(null=True, blank=True)
     venue_type = models.CharField(max_length=150, choices=VENUE_TYPE_CHOICES, db_index=True)

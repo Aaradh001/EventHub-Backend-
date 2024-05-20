@@ -1,9 +1,10 @@
 from rest_framework.generics import ListCreateAPIView, ListAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
-from ..models import EventCategory, Event
+from ..models import EventCategory, Event, Requirement
 from accounts.models import ClientProfile, VendorProfile
-from .serializer import EventCategorySerialiser, EventSerialiser
+from .serializer import EventCategorySerialiser, EventSerialiser, RequirementSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework import status
@@ -41,7 +42,7 @@ class EventListCreateView(ListCreateAPIView):
             print(e)
             return Response(status=status.HTTP_404_NOT_FOUND)
         
-        launched_event = Event.objects.filter(client_id=client.pk, status="LAUNCHED").first()
+        launched_event = Event.objects.filter(client_id=client.pk, event_stage="LAUNCHED").first()
         all_events_serializer = self.get_serializer(queryset, many=True)
         if launched_event:
             launched_event_serializer = self.get_serializer(launched_event)
@@ -59,7 +60,7 @@ class EventListCreateView(ListCreateAPIView):
         except ClientProfile.DoesNotExist:
             raise NotFound("Client profile not found")
         
-        if Event.objects.filter(client_id=client.pk, status="launched").exists():
+        if Event.objects.filter(client_id=client.pk, event_stage="launched").exists():
             raise ValidationError("There is already an event launched for this client.")
         
         counter = Event.objects.all().count()+1
@@ -92,3 +93,28 @@ class EventRetrieveUpdateView(RetrieveUpdateAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
+
+
+
+
+class RequirementBulkCreateListView(APIView):
+
+    def get(self, request, *args, **kwargs):
+        event_id = request.data.get('event_id')
+        requirements = Requirement.objects.filter(event_event_id=event_id)
+        serializer = RequirementSerializer(requirements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        created_objects = []
+        errors = []
+
+        for item in request.data:
+            item_serializer = RequirementSerializer(data=item)
+            if item_serializer.is_valid():
+                item_serializer.save()
+                created_objects.append(item_serializer.data)
+            else:
+                errors.append({'detail': item_serializer.errors, 'data': item})
+
+        return Response({'created': created_objects, 'errors': errors}, status=status.HTTP_207_MULTI_STATUS)

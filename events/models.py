@@ -1,6 +1,7 @@
 from django.db import models
 from accounts.models import VendorProfile, ClientProfile
 from services.models import Service
+from venue_management.models import Venue
 # from venue_management.models import Venue
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
@@ -26,18 +27,33 @@ class EventCategory(models.Model):
     
 
 class Event(models.Model):
-    STATUS_CHOICES = (
+    # STATUS_CHOICES = (
+    #     ('LAUNCHED', 'LAUNCHED'),
+    #     ('PENDING', 'PENDING'),
+    #     ('ASSIGNED', 'ASSIGNED'),
+    #     ('WORK_IN_PROGRESS', 'WORK_IN_PROGRESS'),
+    #     ('VERIFICATION_IN_PROGRESS', 'VERIFICATION_IN_PROGRESS'),
+    #     ('COMPLETED', 'COMPLETED'),
+    # )
+    EVENT_STAGES = (
         ('LAUNCHED', 'LAUNCHED'),
-        ('PENDING', 'PENDING'),
-        ('ASSIGNED', 'ASSIGNED'),
+        ('VENUE-SELECTION', 'VENUE-SELECTION'),
+        ('REQUIREMENT-SELECTION', 'REQUIREMENT-SELECTION'),
+        ('VENDOR-SELECTION', 'VENDOR-SELECTION'),
+        ('ADVANCE-PAYMENT', 'ADVANCE-PAYMENT'),
+        ('BOOKED','BOOKED'),
         ('WORK_IN_PROGRESS', 'WORK_IN_PROGRESS'),
         ('VERIFICATION_IN_PROGRESS', 'VERIFICATION_IN_PROGRESS'),
         ('COMPLETED', 'COMPLETED'),
+        ('CANCELLED_BY_CLIENT', 'CANCELLED_BY_CLIENT'),
+        ('CANCELLED_BY_ADMIN', 'CANCELLED_BY_ADMIN'),
     )
+
+    event_stage = models.CharField(max_length=200, choices=EVENT_STAGES, default="LAUNCHED", null=True, blank=True)
     event_id = models.CharField(max_length=150)
     event_cat = models.ForeignKey(EventCategory, on_delete=models.DO_NOTHING, null=True, blank=True)
     thumbnail = models.ImageField(upload_to='events/eventthumb/', null = True, blank = True)
-    # venue = models.ForeignKey(Venue, on_delete=models.DO_NOTHING)
+    venue = models.ForeignKey(Venue, on_delete=models.DO_NOTHING, null=True, blank=True)
     organiser = models.ForeignKey(VendorProfile, on_delete=models.DO_NOTHING, null=True, blank=True)
     client = models.ForeignKey(ClientProfile, on_delete=models.DO_NOTHING)
     name = models.CharField(max_length=150)
@@ -47,7 +63,6 @@ class Event(models.Model):
     end_date = models.DateField()
     is_advance_paid = models.BooleanField(default=False)
     is_final_amount_paid = models.BooleanField(default=False)
-    status = models.CharField(max_length=200, choices=STATUS_CHOICES, default='LAUNCHED')
     is_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -84,9 +99,10 @@ class Event(models.Model):
 
 
 class Requirement(models.Model):
-    FOOD_PREFERENCE_CHOICES = [
-    ('veg', 'Vegetarian'),
-    ('non-veg', 'Non-Vegetarian'),
+    TYPE_CHOICES = [
+    ('CATERING', 'CATERING'),
+    ('DECORATION', 'DECORATION'),
+    ('OTHERS', 'OTHERS')
 ]
     CATERING_JSON_SCHEMA = {
     "type": "object",
@@ -105,10 +121,10 @@ class Requirement(models.Model):
     "properties": {
         # "theme_description": {"type": "string", "enum": ["veg", "non-veg"]},
         "theme_description": {"type": "string"},
-        "size of the area": {"type": "number"},
+        "area_span": {"type": "number"},
         "layout_description": {"type": "string"},
         "props_and_materials": {"type": "array", "items": {"type": "string"}},
-        "is_lighting_and effects_required": {"type": "boolean"},
+        # "is_lighting_and_effects_required": {"type": "boolean"},
         "lighting_and_effects": {"type": "array", "items": {"type": "string"}},
         "design_instructions": {"type": "string"},
         # Add more properties specific to instance 1
@@ -125,20 +141,21 @@ class Requirement(models.Model):
     is_completed = models.BooleanField(default=False)
     start_time = models.DateField()
     requirement_details = models.JSONField(null=True)
+    requirement_type = models.CharField(max_length=150, choices=TYPE_CHOICES, null=True, blank=True)
     # parent = models.ForeignKey('self', null = True, blank = True, on_delete = models.CASCADE, related_name = 'children')
 
     def __str__(self):
         return self.req_name
 
-    def save(self, *args, **kwargs):
-        # Validate JSON data against the schema before saving
-        if args and args.instance_type:
-            if args.instance_type == 'CATERING':
-                validate(instance=self.requirement_details, schema=self.CATERING_JSON_SCHEMA)
-            elif args.instance_type == 'DECORATION':
-                validate(instance=self.requirement_details, schema=self.DECORATION_JSON_SCHEMA)
-        # validate(instance=self.json_data, schema=self.CATERING_JSON_SCHEMA)
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     # Validate JSON data against the schema before saving
+    #     if args and args.instance_type:
+    #         if args.instance_type == 'CATERING':
+    #             validate(instance=self.requirement_details, schema=self.CATERING_JSON_SCHEMA)
+    #         elif args.instance_type == 'DECORATION':
+    #             validate(instance=self.requirement_details, schema=self.DECORATION_JSON_SCHEMA)
+    #     # validate(instance=self.json_data, schema=self.CATERING_JSON_SCHEMA)
+    #     super().save(*args, **kwargs)
 """
 For the child services, create sub services as planned by using the self relation. While creating requirements model,
 create a flied for a csv file which will contain the updated service checkist. So based on the checklist uploaded by the client

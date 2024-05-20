@@ -34,24 +34,12 @@ class ClientSerializer(serializers.ModelSerializer):
         instance.client.save()
         return instance
 
-class VendorSerializer(serializers.ModelSerializer):
-    vendor = AccountSerializer()
-    class Meta:
-        model = VendorProfile
-        fields = "__all__"
-        # exclude = ('password', 'user_role')
-
-    def update(self, instance, validated_data):
-        instance.vendor.is_active = validated_data['vendor']['is_active']
-        instance.vendor.save()
-        return instance
-
 
 class VenueListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Venue
-        fields = ['id', 'name', 'full_address', 'city', 'capacity', 'management_company', 'rental_fees', 'reservation_status', 'venue_type', 'is_active']
+        fields = ['id', 'name', 'city', 'state', 'thumbnail', 'reservation_status', 'venue_type']
 
     # def update(self, instance, validated_data):
     #     print(instance)
@@ -74,15 +62,9 @@ class AmenitiesSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class VenueImageSerializer(serializers.ModelSerializer):
-    
     class Meta:
         model = VenueImage
         fields = '__all__'
-    
-    def create(self, validated_data):
-        print("dwsdsd", validated_data)
-        return VenueImage.objects.create(image=validated_data['image'], caption=validated_data['caption'])
-
    
 
 class VenueSerializer(serializers.ModelSerializer):
@@ -93,31 +75,3 @@ class VenueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Venue
         fields = '__all__'
-
-    def update(self, instance, validated_data):
-        if self.context['request'].method == 'PATCH':
-            if 'is_active' in validated_data:
-                instance.is_active = validated_data['is_active']
-        elif self.context['request'].method == 'PUT':
-            amenities_data = validated_data.pop('amenities', [])
-            instance = super().update(instance, validated_data)
-            if amenities_data is not None:
-                instance.amenities.clear()
-                for amenity_data in amenities_data:
-                    amenity, created = Amenities.objects.get_or_create(**amenity_data)
-                    instance.amenities.add(amenity)
-        instance.save()
-        return instance
-
-    def create(self, validated_data):
-        amenities_data = validated_data.pop('amenities', None)
-        venue = Venue.objects.create(**validated_data)
-
-        if amenities_data:
-            # Create new amenities if they don't exist in the database
-            for amenity_data in amenities_data:
-                amenity, created = Amenities.objects.get_or_create(**amenity_data)
-                venue.amenities.add(amenity)
-
-        return venue
-

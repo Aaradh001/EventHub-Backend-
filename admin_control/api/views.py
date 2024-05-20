@@ -17,9 +17,9 @@ from django.contrib.auth import authenticate
 from django.http import Http404
 from decouple import config
 from django.conf import settings
-from accounts.models import Account, ClientProfile
+from accounts.models import Account, ClientProfile, VendorProfile
 from venue_management.models import Venue, Amenities, VenueImage
-from .serializer import ClientSerializer, VenueListSerializer, VenueSerializer, AmenitiesSerializer, VenueImageSerializer
+from .serializer import ClientSerializer, VendorSerializer, VenueListSerializer, VenueSerializer, AmenitiesSerializer, VenueImageSerializer
 from django.contrib.auth import get_user_model
 import json
 # Create your views here.
@@ -91,6 +91,41 @@ class AdminClientUserListCreateView(ListAPIView):
 class ClientRetrieveUpdateAPIView(RetrieveUpdateAPIView):
     queryset = ClientProfile.objects.all()
     serializer_class = ClientSerializer
+    permission_classes = [IsAuthAdmin]
+
+
+# vendor management
+
+
+class AdminVendorUserListCreateView(ListAPIView):
+    permission_classes = [IsAuthAdmin]
+    queryset = VendorProfile.objects.filter(vendor__user_role = 'VENDOR').order_by('vendor__date_joined')
+    serializer_class = VendorSerializer
+    pagination_class = PageNumberPagination
+    filter_backends = [SearchFilter]
+    search_fields = ['company_name', 'website']
+
+    def list(self, request, *args, **kwargs):
+        self.pagination_class.page_size = 2
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True)
+        total_pages = self.paginator.page.paginator.num_pages if self.paginator else 1
+        current_page = self.paginator.page.number if self.paginator else 1
+        
+        # Prepare the response data including pagination metadata
+        data = {
+            'total_pages': total_pages,
+            'current_page': current_page,
+            'results': serializer.data
+        }
+        
+        # Return the paginated response
+        return self.get_paginated_response(data)
+
+class VendorRetrieveUpdateAPIView(RetrieveUpdateAPIView):
+    queryset = VendorProfile.objects.all()
+    serializer_class = VendorSerializer
     permission_classes = [IsAuthAdmin]
 
 

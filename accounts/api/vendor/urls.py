@@ -17,4 +17,6 @@ urlpatterns = [
     path("my-services/other-services/", views.OtherServicesListView.as_view(), name="other_sevices_list"),
     path("my-services/other-service/<int:pk>/", views.OtherServiceGetView.as_view(), name="other_service"),
 
+    path("all-vendors/", views.ProfileImageUpdateView.as_view(), name="logo_update"),
+
 ]

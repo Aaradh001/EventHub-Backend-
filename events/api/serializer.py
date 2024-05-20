@@ -2,7 +2,9 @@ from rest_framework import serializers
 from ..models import EventCategory, Event
 from accounts.models import ClientProfile, Account
 from accounts.api.client.serializers import ClientProfileSerializer
-
+from jsonschema import validate, ValidationError as JSONSchemaValidationError
+from rest_framework.exceptions import ValidationError
+from ..models import Requirement
 
 
 class EventCategorySerialiser(serializers.ModelSerializer):
@@ -44,3 +46,54 @@ class EventSerialiser(serializers.ModelSerializer):
     #     instance.is_completed = validated_data.get('is_completed', instance.is_completed) 
 
     #     instance.save()
+
+
+
+class RequirementSerializer(serializers.ModelSerializer):
+    service_type = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Requirement
+        fields = ['service', 'req_name', 'cost_per_unit', 'is_completed', 'start_time', 'requirement_details', 'service_type']
+
+    def validate_requirement_details(self, value):
+        # Allow requirement_details to be null
+        if value is None:
+            return value
+
+        service_type = self.initial_data.get('service_type')
+        if service_type == 'CATERING':
+            schema = Requirement.CATERING_JSON_SCHEMA
+        elif service_type == 'DECORATION':
+            schema = Requirement.DECORATION_JSON_SCHEMA
+        else:
+            raise ValidationError("Invalid instance type.")
+        
+        try:
+            validate(instance=value, schema=schema)
+        except Exception as e:
+            raise ValidationError(f"Invalid data for {service_type}: {e}")
+        
+        return value
+
+    def create(self, validated_data):
+        service_type = validated_data.pop('service_type', None)
+        
+        if service_type:
+            requirement_details = validated_data.get('requirement_details')
+            if requirement_details is not None:
+                if service_type == 'CATERING':
+                    schema = Requirement.CATERING_JSON_SCHEMA
+                elif service_type == 'DECORATION':
+                    schema = Requirement.DECORATION_JSON_SCHEMA
+                else:
+                    raise ValidationError("Invalid instance type.")
+                
+                try:
+                    validate(instance=requirement_details, schema=schema)
+                except Exception as e:
+                    raise ValidationError(f"Invalid data for {service_type}: {e}")
+        
+        requirement = Requirement(**validated_data)
+        requirement.save()
+        return requirement

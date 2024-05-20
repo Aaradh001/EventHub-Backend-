@@ -13,4 +13,5 @@ urlpatterns = [
     path('event/', include('events.api.urls')),
     path('services/', include('services.api.urls')),
     path('admin-control/', include('admin_control.api.urls')),
+    path('venue/', include('venue_management.api.urls')),
 ]+ static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)

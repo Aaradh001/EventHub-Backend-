@@ -13,4 +13,5 @@ from ..models import Service
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
-        exclude = ('slug',)
+        fields = "__all__"
+        read_only_fields = ['slug']

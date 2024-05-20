@@ -25,12 +25,12 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 
 class ServiceList(ListCreateAPIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
     queryset = Service.objects.filter(is_active = True).order_by('name')
     serializer_class = ServiceSerializer
 
 class ServiceGetOrUpdate(RetrieveUpdateAPIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     queryset = Service.objects.filter(is_active = True).order_by('name')
     serializer_class = ServiceSerializer
     lookup_field = 'pk'
