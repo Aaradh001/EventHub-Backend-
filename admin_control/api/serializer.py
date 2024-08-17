@@ -77,12 +77,7 @@ class VenueImageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = VenueImage
-        fields = '__all__'
-    
-    def create(self, validated_data):
-        print("dwsdsd", validated_data)
-        return VenueImage.objects.create(image=validated_data['image'], caption=validated_data['caption'])
-
+        fields = '__all__' 
    
 
 class VenueSerializer(serializers.ModelSerializer):

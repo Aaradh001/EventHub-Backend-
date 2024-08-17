@@ -196,13 +196,25 @@ class VenueImageListCreateAPIView(ListCreateAPIView):
         return queryset
     
     def post(self, request, *args, **kwargs):
-        serializer = VenueImageSerializer(data=request.data, many=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=201)
-        else:
-            return Response(serializer.errors, status=400)
-    
+        images = []
+        errors = []
+        venue_id = request.data.get("venue_id")
+        for caption, image in request.FILES.items():
+            data = {
+                'venue': venue_id,
+                'caption': caption,
+                'image': image,
+                }
+            serializer = VenueImageSerializer(data = data)
+            if serializer.is_valid():
+                images.append(serializer.save())
+            else:
+                errors.append(serializer.errors)
+            
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        serialized_images = VenueImageSerializer(images, many=True)
+        return Response(serialized_images.data, status=status.HTTP_201_CREATED)
 
 class VenueImageRetrieveUpdateAPIView(RetrieveUpdateAPIView):
     queryset = VenueImage.objects.all()

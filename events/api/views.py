@@ -4,7 +4,10 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 from ..models import EventCategory, Event, Requirement
 from accounts.models import ClientProfile, VendorProfile
-from .serializer import EventCategorySerialiser, EventSerialiser, RequirementSerializer
+from .serializer import EventCategorySerialiser, EventSerialiser, RequirementSerializer, VendorSerializer
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework import status
@@ -77,7 +80,7 @@ class EventRetrieveUpdateView(RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Event.objects.all().order_by('created_at')
     serializer_class = EventSerialiser
-    lookup_field = 'event_id'
+    lookup_field = 'pk'
 
     def perform_update(self, serializer):
         try:
@@ -101,11 +104,12 @@ class RequirementBulkCreateListView(APIView):
 
     def get(self, request, *args, **kwargs):
         event_id = request.data.get('event_id')
-        requirements = Requirement.objects.filter(event_event_id=event_id)
+        requirements = Requirement.objects.filter(event__event_id=event_id)
         serializer = RequirementSerializer(requirements, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
+        print("fromn frontend   :",request.data)
         created_objects = []
         errors = []
 
@@ -118,3 +122,39 @@ class RequirementBulkCreateListView(APIView):
                 errors.append({'detail': item_serializer.errors, 'data': item})
 
         return Response({'created': created_objects, 'errors': errors}, status=status.HTTP_207_MULTI_STATUS)
+    
+
+
+
+class VendorList(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    queryset = VendorProfile.objects.filter(vendor__user_role='VENDOR').order_by('vendor__date_joined')
+    serializer_class = VendorSerializer
+    pagination_class = PageNumberPagination
+    filter_backends = [SearchFilter]
+    search_fields = ['company_name', 'website']
+
+    def list(self, request, *args, **kwargs):
+        self.pagination_class.page_size = 2
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            total_pages = self.paginator.page.paginator.num_pages if self.paginator else 1
+            current_page = self.paginator.page.number if self.paginator else 1
+            data = {
+                'total_pages': total_pages,
+                'current_page': current_page,
+                'results': serializer.data
+            }
+            return self.get_paginated_response(data)
+        else:
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+
+class vendorRetrieveView(RetrieveAPIView):
+    queryset = VendorProfile.objects.all()
+    serializer_class = VendorSerializer
+    permission_classes = [IsAuthenticated]
+
+
